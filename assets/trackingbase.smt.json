@@ -1,0 +1,16 @@
+jsonCallback({
+  "trackingBase": {
+    "enabled": true,
+    "omniture": {
+      "pageTracking": true,
+      "controlTracking": true
+    },
+    "mediaMind": {
+      "pageTracking": true,
+      "controlTracking": true
+    },
+    "webChat": true,
+    "ga4": true,
+    "floodlight": true
+  }
+});
