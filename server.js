@@ -172,7 +172,7 @@ app.post('/panel/login', (req, res) => {
   res.redirect(303, '/panel?fail=1');
 });
 
-app.get('/panel/*', (req, res) => res.redirect(302, '/panel'));
+app.get('/panel/*path', (req, res) => res.redirect(302, '/panel'));
 
 app.post('/panel/logout', (req, res) => { 
   req.session.destroy(); 
@@ -535,4 +535,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Panel user: ${PANEL_USER}`);
   currentDomain = process.env.RAILWAY_STATIC_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+
 });
